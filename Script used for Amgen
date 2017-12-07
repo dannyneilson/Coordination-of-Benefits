@@ -1,3 +1,15 @@
+--this shows 21,899 records for Nplate, 188,768 for Neulasta, there are 9x more records for Neulasta
+select * from claims_submits_provider limit 100;
+select * from claims_submits_diagnosis limit 100;
+
+select therapy, count(*)
+from DN_amgen_final_oop_landscape
+where therapy = 'Neulasta' and year_month = '2016-07' 
+group by therapy;
+
+select * from DN_amgen_final_bandR_new_reformat_update where therapy = 'Neulasta' and SUBSTRING(SERVICE_FROM_DATE, 0,7) = '2016-07' LIMIT 100 ;
+
+DESCRIBE TABLE DN_amgen_final_oop_landscape;
 --table we are using is DN_amgen_final_bandR_new_reformat
 
 --this project determines the breakdown of OOP costs for both patients and claims for Nplate
@@ -14,13 +26,14 @@ payer_claim_control_number
 ,case when Copayment_Amount > 0 then Copayment_Amount else 0 end as Copay
 ,case when Coinsurance_Amount > 0 then Coinsurance_Amount else 0 end as Coinsurance
 ,case when Deductible_Amount > 0 then Deductible_Amount else 0 end as Deductible
-, case when Plan_Type in ('Medicare A', 'Medicare B', 'Medicare D', 'Medicare Advantage')
-then 'AllMedicare'
-else 'Other'
-end as Plan_Type 
+, Plan_Type 
 from DN_amgen_final_bandR_new_reformat_update
-where service_from_date >= '2016-07' and service_from_Date <= '2017-06'
-and therapy <> 'Unknown';
+where service_from_date >= '2016-01' and service_from_Date <= '2016-12'
+and therapy <> 'Unknown' and Data_Source <> 'Pharmacy';
+
+select distinct plan_type from DN_amgen_final_bandR_new_reformat_update;
+select * from sandbox.plan_type_determination;
+select count(*) from  D_Amgen_EAll_Remit_ST2_counter_allmedicare_Nplate limit 100;
 
 --creating a Total OOP calculation for medicare with deductible
 drop table if exists D_Amgen_EAll_Remit_ST2_counter_OOP_allmedicarewithdeductible;
@@ -184,8 +197,7 @@ payer_claim_control_number
  sum(count_claims_100_to_150_oop) as onehundredtoonefifty, sum(count_claims_150_to_200_oop) as onehundredtotwohundred
 ,sum(count_claims_200_to_250_oop) as twohundredtotwofifty, sum(count_claims_250_to_300_oop) as twofiftytothreehundred, sum(count_claims_300_plus_oop) as threehundredplus
 from DN_Amgen_OOP_062017_final_Nplate_medicaredeductible 
-where plan_type = 'AllMedicare'
-and therapy = 'Nplate'
+where therapy = 'Neulasta'
 group by plan_type, therapy;
 
 
@@ -220,7 +232,7 @@ then 'Commercial'
 else 'Other'
 end as Plan_Type 
 from DN_amgen_final_bandR_new_reformat_update
-where service_from_date >= '2016-07' and service_from_Date <= '2017-06'
+where service_from_date >= '2016-01' and service_from_Date <= '2016-12'
 and therapy <> 'Unknown';
 
 select * from DN_amgen_final_bandR_new_reformat_update limit 100;
@@ -233,16 +245,6 @@ select *
 from D_Amgen_EAll_Remit_ST2_counter_allcommercial_Nplate;
 
 
-select distinct(data_source), count(*) 
-from D_Amgen_EAll_Remit_ST2_counter_allcommercial_Nplate 
-where therapy = 'Nplate'
-group by data_source
-;
-
-select therapy, plan_type, data_source
-from D_Amgen_EAll_Remit_ST2_counter_OOP_commercial_Nplate
-where therapy = 'Nplate' and plan_type = 'Commercial' and data_source = 'CONDOR';
-group by therapy, plan_type, data_source;
 
 --******GETTING COMMERCIAL CLAIM AVERAGE
 select therapy, sum(OOP), count(*), sum(OOP)/count(*) as commercialclaimaverage 
@@ -250,7 +252,6 @@ from (select * from D_Amgen_EAll_Remit_ST2_counter_OOP_commercial_Nplate
 where therapy = 'Nplate' and plan_type = 'Commercial' and OOP > 0 )
 group by therapy;
 
- and (Data_Source = 'Condor' or Data_Source = 'Pharmacy'))
 
       
 select count(*) 
@@ -389,6 +390,9 @@ type_of_bill,
 billing_pr_npi,
 rendering_pr_npi;
 
+select count(*) from DN_amgen_final_bandR_new_reformat_update;--12,191,749
+select count(*) from D_Amgen_EAll_Remit_ST1_case;--7,467,706
+
 --getting the OOP values
 drop table if exists D_Amgen_EAll_Remit_ST1_Nplate_change;
 create table D_Amgen_EAll_Remit_ST1_Nplate_change as
@@ -437,7 +441,7 @@ min(case
 end) as medicare_payer_coinsurance
 
 from D_Amgen_EAll_Remit_ST1_case
-where service_from_date >= '2016-07' and service_from_Date <= '2017-06'
+where service_from_date >= '2016-01' and service_from_Date <= '2016-12'
 and therapy <> 'Unknown'
 group by 
 patient_id,
@@ -450,7 +454,7 @@ select therapy,count(*) from D_Amgen_EAll_Remit_ST1_Nplate_change
 where patient_id is not null and patient_id not like 'XXX -%' and countcommercial > 0 and therapy = 'Nplate'
 group by therapy;
 
-select * from D_Amgen_EAll_Remit_ST1_Nplate_change limit 100;
+select count(*) from D_Amgen_EAll_Remit_ST1_Nplate_change limit 100;--1,466,596 RECORDS
 
 --******how many records do we see for identified medicare patients?
 select therapy, count(*) from D_Amgen_EAll_Remit_ST1_Nplate_change
@@ -941,7 +945,16 @@ therapy
  group by 
 therapy;
 
+
 --******GETTING MEDICARE PATIENT RESULTS
 select * 
 from DN_Amgen_OOP_062017_final_Nplate_medicare
 where therapy = 'Nplate';
+
+
+
+
+select * from rwd.THIRD_PARTY_CMSNPI limit 100;
+describe table rwd.THIRD_PARTY_CMSNPI;
+select * from srn_cmsnpi_latest limit 100;
+select distinct(organization_type) from sandbox.claims_submits_facility_master limit 100;
